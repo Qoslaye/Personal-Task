@@ -19,20 +19,23 @@ exports.createTask = (req, res) => {
             return;
         }
         
+        const image = files.iamge[0];
+
         const tasks = readTasksFromFile(); 
+
         const newTask = { 
             id : Data.now(), 
             title : fields.title ,
             description: fields.description || '' ,
             status : fields.status || 'pending' ,
-            image : files.image ? `/uploads/${files.image.name}` : null ,
+            image : files.image ? `/uploads/${image.originalFilename}` : null ,
         }
 
         tasks.push(newTask);
         writeTasksToFile(tasks);
 
         if (files.image) { 
-            copyFilesync(files.image.name , path.join(__dirname__ , '../uploads' , files.image.name) );
+            copyFilesync(files.image.name , path.join(__dirname__ , '../uploads' , image.origanalFilename) );
             res.end(JSON.stringify(newTask))
         }
     })
