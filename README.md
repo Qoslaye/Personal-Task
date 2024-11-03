@@ -21,7 +21,6 @@ This is a simple Task Manager API built with Node.js. The API is designed for ma
    ```bash
    git clone https://github.com/Qoslaye/Personal-Task-API-using-Nodejs.git
 
-https://github.com/Qoslaye/Personal-Task-API-using-NODEjs/issues/1#issue-2630986012
 ### Key Updates:
 - Added a **"Running the Application"** section with instructions.
 - Included a **"API Endpoints"** section to outline the available API routes.
