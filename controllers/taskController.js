@@ -11,35 +11,69 @@ exports.getTasks = (req, res) => {
 
 exports.createTask = (req, res) => {
     const form = new IncomingForm();
+    form.uploadDir = path.join(__dirname, '../uploads');
+    form.keepExtensions = true;
+
+    // Log to confirm directory existence
+    console.log("Upload directory:", form.uploadDir);
+
+    // Ensure the upload directory exists
+    if (!fs.existsSync(form.uploadDir)) {
+        fs.mkdirSync(form.uploadDir, { recursive: true });
+        console.log("Upload directory created.");
+    }
+
     form.parse(req, (err, fields, files) => {
         if (err) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: 'Error parsing form data.' }));
-            return;
+            console.error("Form parse error:", err);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ message: 'Error parsing form data.' }));
         }
 
         const tasks = readTasksFromFile();
+
+        let imagePath = null;
+        if (files.image && files.image.filepath) {
+            console.log("File path received:", files.image.filepath);
+
+            const originalFileName = files.image.originalFilename || 'uploaded_image';
+            const newFilePath = path.join(form.uploadDir, originalFileName);
+
+            try {
+                const stat = fs.statSync(files.image.filepath);
+                if (!stat.isDirectory()) {
+                    // Move file to the new location
+                    fs.renameSync(files.image.filepath, newFilePath);
+                    imagePath = `/uploads/${originalFileName}`;
+                    console.log("File successfully moved to:", newFilePath);
+                } else {
+                    console.error("Error: The filepath is a directory, not a file.");
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({ message: 'Uploaded file path is a directory, not a file.' }));
+                }
+            } catch (error) {
+                console.error("Error handling file operation:", error);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ message: 'Error saving the uploaded file.' }));
+            }
+        }
+
         const newTask = {
-            id: Date.now(), // Corrected `Data.now()` typo
+            id: Date.now(),
             title: fields.title,
             description: fields.description || '',
             status: fields.status || 'pending',
-            image: files.image ? `/uploads/${files.image.originalFilename}` : null
+            image: imagePath
         };
 
         tasks.push(newTask);
         writeTasksToFile(tasks);
 
-        // Save the image if provided
-        if (files.image) {
-            const uploadPath = path.join(__dirname, '../uploads', files.image.originalFilename);
-            fs.copyFileSync(files.image.filepath, uploadPath); // Updated copy logic
-        }
-
         res.writeHead(201, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(newTask));
+        return res.end(JSON.stringify(newTask));
     });
 };
+
 
 exports.updateTask = (req, res) => {
     const form = new IncomingForm();
@@ -60,7 +94,6 @@ exports.updateTask = (req, res) => {
             return;
         }
 
-        // Update task properties
         tasks[taskIndex] = {
             ...tasks[taskIndex],
             title: fields.title || tasks[taskIndex].title,

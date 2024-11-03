@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f9f9f9; 
+            color: #333; 
+        }
+        h1, h2 { 
+            color: #4CAF50; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: left; 
+        }
+        th { 
+            background-color: #4CAF50; 
+            color: white; 
+        }
+        tr:hover { 
+            background-color: #f1f1f1; 
+        }
+        button { 
+            padding: 8px 12px; 
+            color: white; 
+            background-color: #4CAF50; 
+            border: none; 
+            cursor: pointer; 
+            border-radius: 4px; 
+        }
+        button:hover { 
+            background-color: #45a049; 
+        }
+        form { 
+            margin-bottom: 20px; 
+            padding: 15px; 
+            background: white; 
+            border-radius: 5px; 
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+        }
+        input, textarea, select { 
+            width: calc(100% - 20px); 
+            padding: 10px; 
+            margin-bottom: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+        }
+        .notification {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e7f3fe;
+            color: #31708f;
+            border: 1px solid #b3e5fc;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Task Manager</h1>
+
+<div class="notification" id="notification"></div>
+
+<h2>Create Task</h2>
+<form id="taskForm" enctype="multipart/form-data">
+    <input type="text" name="title" placeholder="Task Title" required />
+    <textarea name="description" placeholder="Task Description" rows="4"></textarea>
+    <select name="status">
+        <option value="pending">Pending</option>
+        <option value="completed">Completed</option>
+    </select>
+    <input type="file" name="image" accept="image/*" required />
+    <button type="submit">Add Task</button>
+</form>
+
+<h2>Tasks</h2>
+<table id="taskTable">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+    const taskForm = document.getElementById('taskForm');
+    const taskTableBody = document.getElementById('taskTable').getElementsByTagName('tbody')[0];
+    const notification = document.getElementById('notification');
+
+    // Show notification
+    function showNotification(message) {
+        notification.innerText = message;
+        notification.style.display = 'block';
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
+    }
+
+    // Fetch tasks from the server
+    async function fetchTasks() {
+        const response = await fetch('/tasks');
+        const tasks = await response.json();
+        renderTasks(tasks);
+    }
+
+    // Render tasks in the table
+    function renderTasks(tasks) {
+        taskTableBody.innerHTML = '';
+        tasks.forEach(task => {
+            const row = taskTableBody.insertRow();
+            row.innerHTML = `
+                <td>${task.id}</td>
+                <td>${task.title}</td>
+                <td>${task.description || 'N/A'}</td>
+                <td>${task.status}</td>
+                <td><button onclick="deleteTask(${task.id})">Delete</button></td>
+            `;
+        });
+    }
+
+    // Add a new task
+    taskForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(taskForm);
+        
+        const response = await fetch('/tasks', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            taskForm.reset();
+            fetchTasks(); // Refresh the task list
+            showNotification('Task added successfully!');
+        } else {
+            showNotification('Failed to add task. Please try again.');
+        }
+    });
+
+    // Delete a task
+    async function deleteTask(id) {
+        const response = await fetch('/tasks', {
+            method: 'DELETE',
+            body: JSON.stringify({ id }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+            fetchTasks(); // Refresh the task list
+            showNotification('Task deleted successfully!');
+        } else {
+            showNotification('Failed to delete task. Please try again.');
+        }
+    }
+
+    // Initial fetch of tasks
+    fetchTasks();
+</script>
+
+</body>
+</html>
